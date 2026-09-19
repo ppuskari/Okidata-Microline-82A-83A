@@ -1,0 +1,17 @@
+# Keep repository text deterministic across Windows and Linux.
+* text=auto
+
+*.c      text eol=lf
+*.h      text eol=lf
+*.md     text eol=lf
+Makefile text eol=lf
+*.csv    text eol=lf
+
+# PowerShell scripts remain CRLF-friendly on Windows.
+*.ps1    text eol=crlf
+
+# Binary printer streams and ROM images must never be normalized.
+*.oki    binary
+*.bin    binary
+*.rom    binary
+*.eprom  binary
