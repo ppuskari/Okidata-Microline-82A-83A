@@ -1,0 +1,8 @@
+/build/
+*.oki
+*.o
+*.obj
+*.exe
+firmware-analysis/roms/
+firmware-analysis/private/
+.DS_Store
