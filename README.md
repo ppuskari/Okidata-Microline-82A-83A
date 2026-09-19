@@ -42,6 +42,23 @@ Additional useful streams:
 ./build/okigraph1-test --model 83a --pattern ruler -o ml83a-ruler.oki
 ```
 
+## Convert a monochrome PBM image
+
+A second utility converts a binary PBM (P4) bitmap directly to the same native
+OkiGraph I stream:
+
+```sh
+./build/okigraph1-pbm \
+  --model 83a \
+  -o image.oki \
+  image.pbm
+```
+
+This converter intentionally performs **no hidden scaling**. One PBM pixel is
+one native 60-column/in graphics column horizontally, and each group of seven
+PBM rows becomes one seven-pin print band. That makes it useful for protocol
+and geometry experiments before CUPS resampling is introduced.
+
 ## Send raw data through CUPS
 
 Create a CUPS queue that points at the USB-to-parallel adapter, then send the
