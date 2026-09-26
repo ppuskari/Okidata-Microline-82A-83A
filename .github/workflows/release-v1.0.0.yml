@@ -1,0 +1,128 @@
+name: Build and publish OkiGraph I v1.0.0
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "release/v1.0.0.trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: debian:bullseye
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential \
+            ca-certificates \
+            cups-client \
+            libcups2-dev \
+            git \
+            gzip \
+            tar
+
+      - name: Check out release commit
+        uses: actions/checkout@v4
+
+      - name: Build and test
+        run: |
+          make clean
+          make
+          make check
+          make cups
+          cupstestppd ppd/okidata-ml82a-okigraph1.ppd
+          cupstestppd ppd/okidata-ml83a-okigraph1.ppd
+
+      - name: Assemble release bundle
+        run: |
+          VERSION="$(cat VERSION)"
+          PKG="okigraph1-cups-${VERSION}"
+          mkdir -p "stage/${PKG}/build" dist
+
+          cp build/rastertookigraph1 "stage/${PKG}/build/"
+          cp build/okigraph1-test "stage/${PKG}/build/"
+          cp build/okigraph1-pbm "stage/${PKG}/build/"
+          cp build/okigraph1-mktest "stage/${PKG}/build/"
+
+          cp -a \
+            README.md LICENSE VERSION Makefile \
+            RELEASE_NOTES_1.0.0.md \
+            docs ppd scripts src tests firmware-analysis \
+            "stage/${PKG}/"
+
+          {
+            echo "Okidata MICROLINE 82A/83A OkiGraph I CUPS Driver ${VERSION}"
+            echo "platform=linux-amd64"
+            echo "build_base=debian-bullseye"
+            echo "cups=$(cups-config --version)"
+            echo "commit=${GITHUB_SHA}"
+          } > "stage/${PKG}/PREBUILT-BUNDLE"
+
+          {
+            echo "Version: ${VERSION}"
+            echo "Commit: ${GITHUB_SHA}"
+            echo
+            uname -a
+            echo
+            cc --version
+            echo
+            echo "CUPS: $(cups-config --version)"
+            echo
+            ldd build/rastertookigraph1 || true
+          } > "stage/${PKG}/BUILD-INFO.txt"
+
+          tar -C stage -czf \
+            "dist/${PKG}-linux-amd64-debian11.tar.gz" \
+            "${PKG}"
+
+          cp build/rastertookigraph1 \
+            "dist/rastertookigraph1-${VERSION}-linux-amd64-debian11"
+
+          (cd dist && sha256sum \
+            "${PKG}-linux-amd64-debian11.tar.gz" \
+            "rastertookigraph1-${VERSION}-linux-amd64-debian11" \
+            > SHA256SUMS.txt)
+
+      - name: Upload build outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: okigraph1-v1.0.0-release
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@v4
+
+      - name: Download build outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: okigraph1-v1.0.0-release
+          path: dist
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            gh release edit v1.0.0 \
+              --title "OkiGraph I CUPS Driver 1.0.0" \
+              --notes-file RELEASE_NOTES_1.0.0.md
+            gh release upload v1.0.0 dist/* --clobber
+          else
+            gh release create v1.0.0 \
+              dist/* \
+              --target "$GITHUB_SHA" \
+              --title "OkiGraph I CUPS Driver 1.0.0" \
+              --notes-file RELEASE_NOTES_1.0.0.md
+          fi

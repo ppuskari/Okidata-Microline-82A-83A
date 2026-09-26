@@ -1,36 +1,102 @@
 # Okidata MICROLINE 82A/83A + OkiGraph I
 
-Firmware provenance, OkiGraph I protocol analysis, and Linux printing tools
-for the Okidata MICROLINE 82A and 83A.
+Firmware provenance, OkiGraph I protocol analysis, native raster conversion,
+and a CUPS 2.x printer driver for the Okidata MICROLINE 82A and 83A with
+OkiGraph I firmware.
 
-The first executable in this repository is a deliberately small raw OkiGraph I
-calibration generator.  It bypasses Ghostscript/CUPS geometry assumptions so
-the real 82A/83A printer mechanics can be validated before the CUPS raster
-filter is written.
+## Version 1.0
 
-## Build
+Version 1.0 is the first public driver release. The ML82A path has been
+validated on physical hardware from raw OkiGraph test streams through CUPS
+2.3.3op2, multi-page jobs, and a Windows client printing through a shared CUPS
+queue. The ML83A uses the same encoder, raster mapper, and CUPS filter; its PPD
+changes the carriage limit to 792 native columns and adds the wide fanfold page.
 
-On a Linux system with a C compiler:
+The engineering history, firmware findings, geometry derivation, raster
+algorithm, CUPS architecture, and hardware validation are documented in
+[`docs/ENGINEERING-REPORT-1.0.md`](docs/ENGINEERING-REPORT-1.0.md).
+
+## Build from source
+
+On Linux:
 
 ```sh
 make
+make check
+make cups
 ```
 
-The main test/conversion executables are:
+The main executables are:
 
 ```text
 build/okigraph1-test
 build/okigraph1-pbm
 build/okigraph1-mktest
+build/rastertookigraph1
 ```
 
-Run the dependency-free regression tests with:
+The CUPS filter requires the CUPS development headers. On Debian Bullseye,
+`libcups2-dev` supplies the headers and `cups-config`.
+
+Install the filter and both PPDs with:
 
 ```sh
-make check
+sudo sh scripts/install-cups.sh
 ```
 
-## Generate a calibration stream
+Then create a queue. For the USB-to-parallel adapters validated during this
+project, the reliable path is the Linux `usblp` device through CUPS' parallel
+backend:
+
+```sh
+sudo sh scripts/configure-cups-queue.sh 82a
+```
+
+That defaults to:
+
+```text
+parallel:/dev/usb/lp0
+```
+
+For an ML83A:
+
+```sh
+sudo sh scripts/configure-cups-queue.sh 83a
+```
+
+A different queue name or device URI can be supplied as the second and third
+arguments. See `docs/CUPS-DRIVER.md`.
+
+## Prebuilt release bundle
+
+The v1.0.0 GitHub release includes a Debian 11/Bullseye amd64 binary bundle
+built against the CUPS 2.3.x development interface. The release bundle already
+contains `build/rastertookigraph1`; `scripts/install-cups.sh` detects the
+prebuilt bundle and installs it without rebuilding.
+
+Source builds remain the portable path for other Linux architectures and
+distributions.
+
+## Native OkiGraph I geometry
+
+The firmware work and physical measurements established the geometry used by
+the driver:
+
+```text
+horizontal graphics pitch: 60 columns/inch
+native graphics band feed: 15/144 inch
+native bands/inch:         9.6
+host graphics pins/band:   7
+ML82A carriage:            480 columns = 8.0 inches
+ML83A carriage:            792 columns = 13.2 inches
+```
+
+The vertical output is not a uniform square-DPI raster. The current mapper
+models adjacent physical head pins at 1/72 inch while band origins advance by
+15/144 inch. It therefore uses the actual nonuniform target positions instead
+of pretending the printer is a generic 72-DPI Epson-compatible device.
+
+## Generate a raw calibration stream
 
 ```sh
 ./build/okigraph1-test \
@@ -39,11 +105,11 @@ make check
   -o ml82a-calibration.oki
 ```
 
-The default page contains 49 native seven-pin graphics bands.  Band 0 and band
-48 are exactly 48 native graphics-feed commands apart.  The firmware-derived
-motion model predicts a 5.000-inch separation between their top-pin baselines.
+The default calibration page contains 49 native seven-pin bands. Band 0 and
+band 48 are exactly 48 graphics-feed commands apart. On the physical ML82A,
+that distance measured exactly 5.000 inches with calipers.
 
-Additional useful streams:
+Useful variants:
 
 ```sh
 ./build/okigraph1-test --model 82a --pattern seam  -o ml82a-seam.oki
@@ -52,11 +118,8 @@ Additional useful streams:
 
 ## Convert a conventional raster image
 
-`okigraph1-pbm` now has two modes.
-
-Without a source DPI it retains the original direct/native mapping used for
-protocol experiments. With `--source-dpi`, it converts an ordinary square-DPI
-PBM into the physically validated OkiGraph geometry:
+With `--source-dpi`, `okigraph1-pbm` converts a normal square-DPI PBM into
+native OkiGraph geometry while preserving physical size:
 
 ```sh
 ./build/okigraph1-pbm \
@@ -67,90 +130,80 @@ PBM into the physically validated OkiGraph geometry:
   image.pbm
 ```
 
-The mapper preserves physical size rather than pretending the printer has a
-uniform 72-DPI vertical raster. Horizontally it targets 60 columns/inch.
-Vertically it places the seven head pins at their physical 1/72-inch pitch
-while successive band origins advance by the validated 15/144 inch.
-
-A deterministic 360-DPI source-raster test can be built with:
+A deterministic 360-DPI regression image and native stream can be produced
+with:
 
 ```sh
 make test-raster-stream
 ```
 
-This produces an 8 x 6 inch test source and the corresponding ML82A OkiGraph
-stream in `build/`. See `docs/RASTER-MAPPER.md` for the exact mapping model.
+See `docs/RASTER-MAPPER.md` for the mapping algorithm.
 
-## Native CUPS driver
+## CUPS architecture
 
-The repository now includes a classic CUPS 2.x raster filter and PPDs for both
-printers:
+The v1.0 path is:
 
 ```text
-src/rastertookigraph1.c
-ppd/okidata-ml82a-okigraph1.ppd
-ppd/okidata-ml83a-okigraph1.ppd
+application / Windows client
+          |
+          v
+        CUPS
+          |
+          v
+pdftopdf / gstoraster
+          |
+          v
+application/vnd.cups-raster
+          |
+          v
+rastertookigraph1
+          |
+          v
+okigraph1-raster physical mapper
+          |
+          v
+okigraph1 native stream encoder
+          |
+          v
+parallel:/dev/usb/lp0
+          |
+          v
+Linux usblp -> USB/parallel bridge -> ML82A/83A
 ```
 
-Build and install them with:
+The CUPS-facing filter deliberately does not duplicate the printer geometry.
+Both standalone conversion and CUPS use the same `okigraph1-raster.c` mapper.
 
-```sh
-make cups
-sudo sh scripts/install-cups.sh
+## USB-to-parallel note
+
+During validation, CUPS also discovered the generic bridge as
+`usb://Unknown/Printer`. That libusb path advertised bidirectional protocol
+2, started a backchannel read thread, and became unreliable under VirtualBox
+USB passthrough. Forcing `usb-unidir` helped, but the robust solution was to
+use the kernel `usblp` device through:
+
+```text
+parallel:/dev/usb/lp0
 ```
 
-See `docs/CUPS-DRIVER.md` for queue creation and first-print instructions.
+With that backend the printer completed consecutive multi-page jobs and jobs
+submitted from Windows without requiring USB detach/reattach cycles.
 
-The ML82A driver path has now been validated end-to-end on CUPS 2.3.3op2 with
-a PDF containing a large JPEG: page fill and aspect ratio were correct, with no
-missing raster lines or visible band-gap defects.
+Other adapters and non-virtualized hosts may expose different reliable device
+URIs; the documented `parallel:/dev/usb/lp0` path is the hardware-validated
+configuration for this project.
 
-## Send raw data through CUPS
+## Documentation
 
-Create a CUPS queue that points at the USB-to-parallel adapter, then send the
-file without format conversion:
+- `docs/ENGINEERING-REPORT-1.0.md` - start-to-finish engineering report
+- `docs/OKIGRAPH1-PROTOCOL.md` - protocol semantics recovered from firmware
+- `docs/RASTER-MAPPER.md` - physical raster mapping algorithm
+- `docs/HARDWARE-VALIDATION.md` - measurement and print validation
+- `docs/CUPS-DRIVER.md` - build, install, queue, and troubleshooting guide
+- `firmware-analysis/` - provenance/disassembly framework
 
-```sh
-lp -d ML83A -o raw ml83a-calibration.oki
-```
+## Firmware images
 
-When a direct Linux parallel character device is available, a raw stream can
-also be tested without the CUPS raster/filter path:
-
-```sh
-cat ml83a-calibration.oki > /dev/usb/lp0
-```
-
-Use the CUPS raw queue first if the USB adapter is already managed by CUPS.
-
-## What to inspect on paper
-
-1. **Horizontal scale** - vertical ruler marks are spaced every 60 graphics
-   columns, nominally one inch.
-2. **Band seams** - the dense field at the left makes unwanted horizontal gaps
-   between native seven-pin bands easy to see.
-3. **Five-inch feed check** - measure from the top-dot baseline of band 0 to
-   the same baseline in band 48.
-4. **Pin ordering** - the diagonal field walks through bits/pins 0..6 and makes
-   reversed or shifted bit mappings obvious.
-
-The ML82A hardware validation completed on 2026-09-26: 48 native graphics
-feeds measured exactly 5.000 inches with calipers, and the horizontal ruler
-confirmed the expected 60-column/inch geometry. See
-`docs/HARDWARE-VALIDATION.md`.
-
-## Next phase
-
-The source-raster-to-native-band mapper remains independent of CUPS and is
-covered by regression tests. The initial `rastertookigraph1` CUPS 2.x wrapper
-now feeds that same mapper, so the hardware-validated geometry is not
-duplicated in the CUPS-facing code.
-
-See `docs/OKIGRAPH1-PROTOCOL.md` for the current protocol model.
-
-## Firmware analysis
-
-`firmware-analysis/` is reserved for the 82A/83A stock/OkiGraph I/IBM PnP
-provenance and disassembly package.  Public artifacts should contain original
-analysis, hashes, metadata, source maps, scripts, and annotations while raw ROM
-images remain private unless redistribution rights are established.
+Raw EPROM images are intentionally not redistributed in this repository.
+Public material contains original analysis, metadata, hashes, structural
+findings, source maps, and derived protocol information.
