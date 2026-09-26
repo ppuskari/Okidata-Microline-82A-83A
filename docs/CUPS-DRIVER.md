@@ -149,6 +149,16 @@ sudo cupsctl --no-debug-logging
 The filter writes page geometry and mapper statistics using normal CUPS
 `DEBUG:` records.
 
+## Hardware validation status
+
+The first complete CUPS print was validated on an ML82A + OkiGraph I using
+CUPS 2.3.3op2. A PDF containing a very large JPEG printed at the correct aspect
+ratio, filled the expected page area, and showed no missing raster lines or
+visible band-gap defects.
+
+That result validates the complete application-to-printer path, not just the
+standalone mapper.
+
 ## Page geometry
 
 The ML82A PPD exposes US Letter and US Legal with an 8-inch imageable width.
