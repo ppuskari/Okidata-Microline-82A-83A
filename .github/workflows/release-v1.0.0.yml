@@ -17,11 +17,12 @@ jobs:
     steps:
       - name: Install build dependencies
         run: |
-          # Bullseye is in archive/LTS territory.  Use the archive endpoints
-          # so the release build is reproducible even when live security
-          # mirrors rotate packages between index publication and download.
+          # Bullseye reached EOL in 2026 and the live/archived security
+          # repositories are temporarily inconsistent.  Build against a
+          # frozen final-LTS snapshot so dependency versions remain coherent.
           cat > /etc/apt/sources.list <<'EOF'
-          deb [check-valid-until=no] http://archive.debian.org/debian bullseye main
+          deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260831T000000Z bullseye main
+          deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260831T210000Z bullseye-security main
           EOF
           apt-get -o Acquire::Check-Valid-Until=false update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
