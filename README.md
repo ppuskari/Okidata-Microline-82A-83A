@@ -81,6 +81,26 @@ make test-raster-stream
 This produces an 8 x 6 inch test source and the corresponding ML82A OkiGraph
 stream in `build/`. See `docs/RASTER-MAPPER.md` for the exact mapping model.
 
+## Native CUPS driver
+
+The repository now includes a classic CUPS 2.x raster filter and PPDs for both
+printers:
+
+```text
+src/rastertookigraph1.c
+ppd/okidata-ml82a-okigraph1.ppd
+ppd/okidata-ml83a-okigraph1.ppd
+```
+
+Build and install them with:
+
+```sh
+make cups
+sudo sh scripts/install-cups.sh
+```
+
+See `docs/CUPS-DRIVER.md` for queue creation and first-print instructions.
+
 ## Send raw data through CUPS
 
 Create a CUPS queue that points at the USB-to-parallel adapter, then send the
@@ -117,10 +137,10 @@ confirmed the expected 60-column/inch geometry. See
 
 ## Next phase
 
-The source-raster-to-native-band mapper is now implemented independently of
-CUPS and covered by regression tests. The next phase is to wrap this exact
-mapping engine in a CUPS raster filter, keeping all OkiGraph geometry in the
-shared core rather than duplicating it in the CUPS-facing code.
+The source-raster-to-native-band mapper remains independent of CUPS and is
+covered by regression tests. The initial `rastertookigraph1` CUPS 2.x wrapper
+now feeds that same mapper, so the hardware-validated geometry is not
+duplicated in the CUPS-facing code.
 
 See `docs/OKIGRAPH1-PROTOCOL.md` for the current protocol model.
 
