@@ -43,6 +43,14 @@ jobs:
           make
           make check
           make cups
+
+          # cupstestppd verifies that each declared cupsFilter exists in the
+          # system filter directory, so stage the just-built filter there
+          # before validating the release PPDs.
+          install -d "$(cups-config --serverbin)/filter"
+          install -m 755 build/rastertookigraph1 \
+            "$(cups-config --serverbin)/filter/rastertookigraph1"
+
           cupstestppd ppd/okidata-ml82a-okigraph1.ppd
           cupstestppd ppd/okidata-ml83a-okigraph1.ppd
 
