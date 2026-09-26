@@ -5,3 +5,5 @@ Triggered after hardware validation of the ML82A CUPS path and promotion of the 
 Retry release workflow after pinning Bullseye archive repositories.
 
 Retry release workflow using Bullseye archive main.
+
+Retry release workflow from final Bullseye snapshots.
