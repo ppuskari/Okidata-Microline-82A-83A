@@ -6,15 +6,18 @@ TEST_TARGET = build/okigraph1-test
 PBM_TARGET = build/okigraph1-pbm
 MKTEST_TARGET = build/okigraph1-mktest
 RASTER_TEST_TARGET = build/test-raster
+CUPS_TARGET = build/rastertookigraph1
 
 CORE_SOURCE = src/okigraph1.c
 RASTER_SOURCE = src/okigraph1-raster.c
 
 HEADERS = src/okigraph1.h src/okigraph1-raster.h
 
-.PHONY: all clean check test-stream test-raster-stream
+.PHONY: all clean check cups test-stream test-raster-stream
 
 all: $(TEST_TARGET) $(PBM_TARGET) $(MKTEST_TARGET)
+
+cups: $(CUPS_TARGET)
 
 $(TEST_TARGET): $(CORE_SOURCE) src/okigraph1-test.c src/okigraph1.h | build
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(CORE_SOURCE) src/okigraph1-test.c
@@ -27,6 +30,15 @@ $(MKTEST_TARGET): src/okigraph1-mktest.c | build
 
 $(RASTER_TEST_TARGET): $(CORE_SOURCE) $(RASTER_SOURCE) tests/test-raster.c $(HEADERS) | build
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(CORE_SOURCE) $(RASTER_SOURCE) tests/test-raster.c
+
+$(CUPS_TARGET): $(CORE_SOURCE) $(RASTER_SOURCE) src/rastertookigraph1.c $(HEADERS) | build
+	@command -v cups-config >/dev/null 2>&1 || { \
+		echo "ERROR: cups-config not found; install the CUPS development package."; \
+		exit 1; \
+	}
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(shell cups-config --cflags) \
+		-o $@ $(CORE_SOURCE) $(RASTER_SOURCE) src/rastertookigraph1.c \
+		$(shell cups-config --ldflags) $(shell cups-config --libs)
 
 build:
 	mkdir -p build
