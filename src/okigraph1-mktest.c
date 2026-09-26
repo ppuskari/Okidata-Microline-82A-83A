@@ -131,8 +131,12 @@ main(int argc, char **argv)
     row_bytes = (width + 7u) / 8u;
     bytes = row_bytes * height;
 
+    /*
+     * Use a 1/60-inch source stroke in both axes so the one-inch ruler
+     * survives a 50% box threshold even across the larger inter-band cell.
+     */
     x_stroke = dpi / 60u;
-    y_stroke = dpi / 72u;
+    y_stroke = dpi / 60u;
     if (x_stroke == 0u)
         x_stroke = 1u;
     if (y_stroke == 0u)
