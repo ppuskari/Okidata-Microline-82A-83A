@@ -12,7 +12,7 @@ fi
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "ERROR: run this installer as root, for example:" >&2
-    echo "  sudo ./scripts/install-cups.sh" >&2
+    echo "  sudo sh scripts/install-cups.sh" >&2
     exit 1
 fi
 
