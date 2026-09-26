@@ -101,6 +101,10 @@ sudo sh scripts/install-cups.sh
 
 See `docs/CUPS-DRIVER.md` for queue creation and first-print instructions.
 
+The ML82A driver path has now been validated end-to-end on CUPS 2.3.3op2 with
+a PDF containing a large JPEG: page fill and aspect ratio were correct, with no
+missing raster lines or visible band-gap defects.
+
 ## Send raw data through CUPS
 
 Create a CUPS queue that points at the USB-to-parallel adapter, then send the
