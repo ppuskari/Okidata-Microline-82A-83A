@@ -341,6 +341,8 @@ main(int argc, char **argv)
         return 1;
     }
 
+    setbuf(stderr, NULL);
+
     signal(SIGTERM, cancel_job);
     signal(SIGINT, cancel_job);
 
@@ -373,6 +375,8 @@ main(int argc, char **argv)
         size_t row_bytes = 0;
 
         ++page;
+
+        fprintf(stderr, "PAGE: %u %u\n", page, header.NumCopies);
 
         fprintf(stderr,
             "DEBUG: Page %u: cupsWidth=%u cupsHeight=%u "
@@ -430,6 +434,9 @@ main(int argc, char **argv)
     result = 0;
 
 done:
+    if (stream_started && stream.in_graphics)
+        (void)okg1_graphics_end(&stream);
+
     if (ras != NULL)
         cupsRasterClose(ras);
 
