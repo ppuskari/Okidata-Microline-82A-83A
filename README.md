@@ -22,13 +22,13 @@ The executable is created as:
 build/okigraph1-test
 ```
 
-## Generate the first ML83A calibration stream
+## Generate a calibration stream
 
 ```sh
 ./build/okigraph1-test \
-  --model 83a \
+  --model 82a \
   --pattern calibration \
-  -o ml83a-calibration.oki
+  -o ml82a-calibration.oki
 ```
 
 The default page contains 49 native seven-pin graphics bands.  Band 0 and band
@@ -38,8 +38,8 @@ motion model predicts a 5.000-inch separation between their top-pin baselines.
 Additional useful streams:
 
 ```sh
-./build/okigraph1-test --model 83a --pattern seam  -o ml83a-seam.oki
-./build/okigraph1-test --model 83a --pattern ruler -o ml83a-ruler.oki
+./build/okigraph1-test --model 82a --pattern seam  -o ml82a-seam.oki
+./build/okigraph1-test --model 82a --pattern ruler -o ml82a-ruler.oki
 ```
 
 ## Convert a monochrome PBM image
@@ -88,9 +88,10 @@ Use the CUPS raw queue first if the USB adapter is already managed by CUPS.
 4. **Pin ordering** - the diagonal field walks through bits/pins 0..6 and makes
    reversed or shifted bit mappings obvious.
 
-Please photograph or measure the first sheet before changing the feed model.
-The hardware result becomes the golden geometry used by the later CUPS raster
-filter.
+The ML82A hardware validation completed on 2026-09-26: 48 native graphics
+feeds measured exactly 5.000 inches with calipers, and the horizontal ruler
+confirmed the expected 60-column/inch geometry. See
+`docs/HARDWARE-VALIDATION.md`.
 
 ## Next phase
 
