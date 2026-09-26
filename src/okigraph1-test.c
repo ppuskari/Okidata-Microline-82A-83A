@@ -140,9 +140,11 @@ calibration_mask(unsigned int band, unsigned int x, unsigned int width)
     unsigned char mask = 0;
     unsigned int pin;
 
-    (void)width;
-
     if ((x % 60u) == 0u)
+        mask |= 0x7fu;
+
+    /* Close the calibration frame at the physical model width. */
+    if (width != 0u && x == width - 1u)
         mask |= 0x7fu;
 
     if (x < 36u) {
