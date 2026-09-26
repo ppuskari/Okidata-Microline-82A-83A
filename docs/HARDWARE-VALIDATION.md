@@ -68,3 +68,39 @@ right edge at column 479 was absent.
 
 The generator now explicitly draws `width - 1` as a seven-pin vertical
 reference column so future calibration sheets have a closed frame.
+
+
+### End-to-end CUPS validation
+
+The first full application-to-printer test also passed on the same ML82A.
+
+Environment:
+
+- CUPS 2.3.3op2
+- `rastertookigraph1` installed as the CUPS raster filter
+- ML82A OkiGraph I PPD
+- USB-to-parallel CUPS backend
+- source document: PDF containing a very large JPEG image
+
+Observed physical result:
+
+- image filled the expected printable page area;
+- aspect ratio was correct;
+- no missing raster lines were visible;
+- no recurring horizontal band gaps were visible;
+- no obvious geometry distortion was visible.
+
+This validates the complete path:
+
+```text
+PDF/application
+    -> CUPS rasterization
+    -> rastertookigraph1
+    -> okigraph1-raster physical mapper
+    -> native OkiGraph I encoder
+    -> USB-to-parallel backend
+    -> MICROLINE 82A + OkiGraph I
+```
+
+The standalone geometry tests and the application-level CUPS print therefore
+agree on real hardware.
