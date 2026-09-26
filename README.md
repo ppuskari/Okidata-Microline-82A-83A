@@ -16,10 +16,18 @@ On a Linux system with a C compiler:
 make
 ```
 
-The executable is created as:
+The main test/conversion executables are:
 
 ```text
 build/okigraph1-test
+build/okigraph1-pbm
+build/okigraph1-mktest
+```
+
+Run the dependency-free regression tests with:
+
+```sh
+make check
 ```
 
 ## Generate a calibration stream
@@ -42,22 +50,36 @@ Additional useful streams:
 ./build/okigraph1-test --model 82a --pattern ruler -o ml82a-ruler.oki
 ```
 
-## Convert a monochrome PBM image
+## Convert a conventional raster image
 
-A second utility converts a binary PBM (P4) bitmap directly to the same native
-OkiGraph I stream:
+`okigraph1-pbm` now has two modes.
+
+Without a source DPI it retains the original direct/native mapping used for
+protocol experiments. With `--source-dpi`, it converts an ordinary square-DPI
+PBM into the physically validated OkiGraph geometry:
 
 ```sh
 ./build/okigraph1-pbm \
-  --model 83a \
+  --model 82a \
+  --source-dpi 360 \
+  --threshold 50 \
   -o image.oki \
   image.pbm
 ```
 
-This converter intentionally performs **no hidden scaling**. One PBM pixel is
-one native 60-column/in graphics column horizontally, and each group of seven
-PBM rows becomes one seven-pin print band. That makes it useful for protocol
-and geometry experiments before CUPS resampling is introduced.
+The mapper preserves physical size rather than pretending the printer has a
+uniform 72-DPI vertical raster. Horizontally it targets 60 columns/inch.
+Vertically it places the seven head pins at their physical 1/72-inch pitch
+while successive band origins advance by the validated 15/144 inch.
+
+A deterministic 360-DPI source-raster test can be built with:
+
+```sh
+make test-raster-stream
+```
+
+This produces an 8 x 6 inch test source and the corresponding ML82A OkiGraph
+stream in `build/`. See `docs/RASTER-MAPPER.md` for the exact mapping model.
 
 ## Send raw data through CUPS
 
@@ -95,10 +117,10 @@ confirmed the expected 60-column/inch geometry. See
 
 ## Next phase
 
-After the raw stream is physically validated, the core encoder will be kept
-independent of CUPS and wrapped by a monochrome raster filter.  That filter can
-then perform explicit source-raster-to-native-band mapping instead of relying
-on generic Epson/Okidata 72-dpi assumptions.
+The source-raster-to-native-band mapper is now implemented independently of
+CUPS and covered by regression tests. The next phase is to wrap this exact
+mapping engine in a CUPS raster filter, keeping all OkiGraph geometry in the
+shared core rather than duplicating it in the CUPS-facing code.
 
 See `docs/OKIGRAPH1-PROTOCOL.md` for the current protocol model.
 
