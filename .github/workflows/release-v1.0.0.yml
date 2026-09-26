@@ -22,7 +22,6 @@ jobs:
           # mirrors rotate packages between index publication and download.
           cat > /etc/apt/sources.list <<'EOF'
           deb [check-valid-until=no] http://archive.debian.org/debian bullseye main
-          deb [check-valid-until=no] http://archive.debian.org/debian-security bullseye-security main
           EOF
           apt-get -o Acquire::Check-Valid-Until=false update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
