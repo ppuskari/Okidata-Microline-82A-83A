@@ -17,7 +17,14 @@ jobs:
     steps:
       - name: Install build dependencies
         run: |
-          apt-get update
+          # Bullseye is in archive/LTS territory.  Use the archive endpoints
+          # so the release build is reproducible even when live security
+          # mirrors rotate packages between index publication and download.
+          cat > /etc/apt/sources.list <<'EOF'
+          deb [check-valid-until=no] http://archive.debian.org/debian bullseye main
+          deb [check-valid-until=no] http://archive.debian.org/debian-security bullseye-security main
+          EOF
+          apt-get -o Acquire::Check-Valid-Until=false update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
             build-essential \
             ca-certificates \
